@@ -27,6 +27,18 @@
   letter-spacing: -3%;
 }
 
+p {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+span {
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h2 {
+  font-family: 'Courier New', Courier, monospace;
+}
+
 .background {
   background-image: url('/background.png');
   background-size: cover;

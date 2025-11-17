@@ -3,209 +3,200 @@ import FileDropZone from '@/components/FileDropZone'
 import IconButton from '@/components/IconButton'
 import { useApiGetCall } from '@/hooks/useApiGetCall'
 import { useApiPostCall } from '@/hooks/useApiPostCall'
-import { IconFileCheck, IconFileText, IconKey, IconLock, IconLockOpen, IconSignature, IconTrash } from '@tabler/icons-react'
-import React, { useState } from 'react'
+import { 
+  IconFileCheck, IconFileText, IconKey, IconLock, 
+  IconLockOpen, IconSignature, IconTrash, IconDownload 
+} from '@tabler/icons-react'
+import React, { useEffect, useState } from 'react'
+import toast from "react-hot-toast"
 
 const MainPage = () => {
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [message, setMessage] = useState<string>('');
-    const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [serverFiles, setServerFiles] = useState([])
+  const [uploading, setUploading] = useState(false)
 
-    const handleFileDrop = async (file: File) => {
-        setUploading(true);
-        setMessage('Uploading file...');
+  const { apiCall, message: messageGet } = useApiGetCall()
+  const { apiCallPost, message: messagePost } = useApiPostCall()
 
-        try {
-        const formData = new FormData();
-        formData.append('file', file);
+  useEffect(() => {
+    if (messageGet) toast(messageGet)
+  }, [messageGet])
 
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-        });
+  useEffect(() => {
+    if (messagePost) toast(messagePost)
+  }, [messagePost])
 
-        const result = await response.json();
+  const loadServerFiles = async () => {
+    const res = await fetch("/api/data")
+    const data = await res.json()
+    setServerFiles(data.files || [])
+  }
 
-        if (response.ok) {
-            setUploadedFile(file);
-            setMessage(`File uploaded successfully: ${file.name}`);
-        } else {
-            setMessage(`Upload failed: ${result.error}`);
-        }
-        } catch (error) {
-        console.error('Upload error:', error);
-        setMessage('Failed to upload file');
-        } finally {
-        setUploading(false);
-        }
-    };
+  useEffect(() => {
+    loadServerFiles()
+  }, [])
 
-    const handleClearFile = () => {
-        setUploadedFile(null);
-        setMessage('');
-    };
+  const handleFileDrop = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
 
-    const { apiCall, loading: loadingGet, message: messageGet } = useApiGetCall();
-    const { apiCallPost, loading, message: messagePost } = useApiPostCall();
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
 
-    const handleGenerateSymmetricKey = () => {
-        apiCall('/api/keys/generate/symmetric');
-    };
+      const result = await response.json()
 
-    const handleGenerateKeyPair = () => {
-        apiCall('/api/keys/generate/asymmetric');
-    };
+      if (response.ok) {
+        setUploadedFile(file)
+        toast.success(`Uploaded: ${file.name}`)
+        loadServerFiles()
+      } else {
+        toast.error(result.error)
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
 
-    const handleEncryptSymmetric = () => {
-        apiCallPost('/api/encrypt/symmetric', { filename: uploadedFile.name });
-    };
+  const handleClearFile = () => setUploadedFile(null)
 
-    const handleDecryptSymmetric = () => {
-        apiCallPost('/api/decrypt/symmetric', { filename: uploadedFile?.name });
-    };
+  const handleGenerateSymmetricKey = async () => {
+    await apiCall('/api/keys/generate/symmetric')
+    loadServerFiles()
+  }
 
-    const handleEncryptAsymmetric = () => {
-        apiCallPost('/api/encrypt/asymmetric', { filename: uploadedFile.name });
-    };
+  const handleGenerateKeyPair = async () => {
+    await apiCall('/api/keys/generate/asymmetric')
+    loadServerFiles()
+  }
 
-    const handleDecryptAsymmetric = () => {
-        apiCallPost('/api/decrypt/asymmetric', { filename: uploadedFile.name });
-    };
+  const handleEncryptSymmetric = async () => {
+    await apiCallPost('/api/encrypt/symmetric', { filename: uploadedFile.name })
+    loadServerFiles()
+  }
 
-    const handleCalculateHash = () => {
-        apiCallPost('/api/hash', { filename: uploadedFile.name });
-    };
+  const handleDecryptSymmetric = async () => {
+    await apiCallPost('/api/decrypt/symmetric', { filename: uploadedFile.name })
+    loadServerFiles()
+  }
 
-    const handleSignFile = () => {
-        apiCallPost('/api/sign', { filename: uploadedFile.name });
-    };
+  const handleEncryptAsymmetric = async () => {
+    await apiCallPost('/api/encrypt/asymmetric', { filename: uploadedFile.name })
+    loadServerFiles()
+  }
 
-    const handleVerifySignature = () => {
-        apiCallPost('/api/verify', { filename: uploadedFile.name });
-    };
+  const handleDecryptAsymmetric = async () => {
+    await apiCallPost('/api/decrypt/asymmetric', { filename: uploadedFile.name })
+    loadServerFiles()
+  }
 
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8 background text-white">
+  const handleCalculateHash = async () => {
+    await apiCallPost('/api/hash', { filename: uploadedFile.name })
+    loadServerFiles()
+  }
 
-        {!uploadedFile ? (
-            <>
-            <h1 className="text-4xl font-bold mb-4">Welcome to Cryptography Playground</h1>
-            <div className="w-full max-w-2xl">
-            <FileDropZone onFileDrop={handleFileDrop} />
-            </div>
-            </>
-        ) : (
-            <div className="w-full max-w-4xl flex flex-col gap-6">
-            <div className="rounded-lg p-4 flex items-center gap-6">
-                <div className="flex items-center gap-3">
-                <IconFileText size={32} className="text-[#dec9e9]" />
-                <div>
-                    <p className="font-semibold">{uploadedFile.name}</p>
-                    <p className="text-sm text-gray-400">
-                    {(uploadedFile.size / 1024).toFixed(2)} KB
-                    </p>
-                </div>
-                </div>
-                <IconTrash onClick={handleClearFile} size={24} className="cursor-pointer text-red-500 hover:text-red-400 transition-colors" />
-            </div>
+  const handleSignFile = async () => {
+    await apiCallPost('/api/sign', { filename: uploadedFile.name })
+    loadServerFiles()
+  }
 
-            <div className=" rounded-lg p-6">
-                <h2 className="text-2xl font-semibold mb-4! flex items-center gap-2">
-                <IconKey size={28} className="text-[#dec9e9]"/>
-                Generate Keys
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <IconButton
-                    icon={<IconKey size={20} />}
-                    text="Generate Symmetric Key"
-                    onClick={handleGenerateSymmetricKey}
-                    disabled={loading}
-                />
-                <IconButton
-                    icon={<IconKey size={20} />}
-                    text="Generate Key Pair (RSA)"
-                    onClick={handleGenerateKeyPair}
-                    disabled={loading}
-                />
-                </div>
-            </div>
+  const handleVerifySignature = async () => {
+    await apiCallPost('/api/verify', { filename: uploadedFile.name })
+  }
 
-            <div className="rounded-lg p-6">
-                <h2 className="text-2xl font-semibold mb-4! flex items-center gap-2">
-                <IconLock size={28} className="text-[#dec9e9]"/>
-                Encrypt / Decrypt
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <IconButton
-                    icon={<IconLock size={20} />}
-                    text="Encrypt (Symmetric)"
-                    onClick={handleEncryptSymmetric}
-                    disabled={loading}
-                />
-                <IconButton
-                    icon={<IconLockOpen size={20} />}
-                    text="Decrypt (Symmetric)"
-                    onClick={handleDecryptSymmetric}
-                    disabled={loading}
-                />
-                <IconButton
-                    icon={<IconLock size={20} />}
-                    text="Encrypt (Asymmetric)"
-                    onClick={handleEncryptAsymmetric}
-                    disabled={loading}
-                />
-                <IconButton
-                    icon={<IconLockOpen size={20} />}
-                    text="Decrypt (Asymmetric)"
-                    onClick={handleDecryptAsymmetric}
-                    disabled={loading}
-                />
-                </div>
-            </div>
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8 background text-white">
 
-            <div className="rounded-lg p-6">
-                <h2 className="text-2xl font-semibold mb-4! flex items-center gap-2">
-                <IconSignature size={28} className="text-[#dec9e9]"/>
-                Hash & Digital Signature
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <IconButton
-                    icon={<IconFileText size={20} />}
-                    text="Calculate Hash"
-                    onClick={handleCalculateHash}
-                    disabled={loading}
-                />
-                <IconButton
-                    icon={<IconSignature size={20} />}
-                    text="Sign File"
-                    onClick={handleSignFile}
-                    disabled={loading}
-                />
-                <IconButton
-                    icon={<IconFileCheck size={20} />}
-                    text="Verify Signature"
-                    onClick={handleVerifySignature}
-                    disabled={loading}
-                />
-                </div>
-            </div>
-
-            {(message || messageGet || messagePost) && (
-                <div className="rounded-lg p-4">
-                <p className="text-blue-100">{message}</p>
-                </div>
-            )}
-
-            {(loading || uploading || loadingGet) && (
-                <div className="flex items-center justify-center gap-2 text-gray-400">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Processing...</span>
-                </div>
-            )}
-            </div>
-        )}
+      {!uploadedFile ? (
+        <div className="w-full max-w-2xl">
+          <FileDropZone onFileDrop={handleFileDrop} />
         </div>
-    );
-};
+      ) : (
+        <div className="w-full max-w-4xl flex flex-col gap-6">
 
-export default MainPage;
+          <div className="rounded-lg flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <IconFileText size={32} className="text-[#dec9e9]" />
+              <div>
+                <p className="font-medium">{uploadedFile.name}</p>
+                <p className="text-sm text-gray-400">{(uploadedFile.size/1024).toFixed(2)} KB</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <a 
+                href={URL.createObjectURL(uploadedFile)} 
+                download={uploadedFile.name}
+                className="text-blue-300 hover:text-blue-100"
+              >
+                <IconDownload size={24}/>
+              </a>
+              <IconTrash onClick={handleClearFile} size={24} className="cursor-pointer text-red-500 hover:text-red-400" />
+            </div>
+          </div>
+
+          <div className="rounded-lg p-6">
+            <h2 className="text-2xl font-medium mb-4! flex items-center gap-2">
+              <IconLock size={28} className="text-[#dec9e9]" />
+              Symmetric cryptography
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <IconButton icon={<IconKey size={20} />} text="Generate key" onClick={handleGenerateSymmetricKey} />
+              <IconButton icon={<IconLock size={20} />} text="Encrypt" onClick={handleEncryptSymmetric} />
+              <IconButton icon={<IconLockOpen size={20} />} text="Decrypt" onClick={handleDecryptSymmetric} />
+            </div>
+          </div>
+
+          <div className="rounded-lg p-6">
+            <h2 className="text-2xl font-medium mb-4! flex items-center gap-2">
+              <IconKey size={28} className="text-[#dec9e9]"/>
+              Asymmetric cryptography
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <IconButton icon={<IconKey size={20} />} text="Generate RSA key pair" onClick={handleGenerateKeyPair} />
+              <IconButton icon={<IconLock size={20} />} text="Encrypt" onClick={handleEncryptAsymmetric} />
+              <IconButton icon={<IconLockOpen size={20} />} text="Decrypt" onClick={handleDecryptAsymmetric} />
+              <IconButton icon={<IconSignature size={20} />} text="Sign file" onClick={handleSignFile} />
+              <IconButton icon={<IconFileCheck size={20} />} text="Verify signature" onClick={handleVerifySignature} />
+            </div>
+          </div>
+
+          <div className="rounded-lg p-6">
+            <h2 className="text-2xl font-medium mb-4! flex items-center gap-2">
+              <IconFileText size={28} className="text-[#dec9e9]" />
+              Hash
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <IconButton icon={<IconFileText size={20} />} text="Calculate Hash" onClick={handleCalculateHash} />
+            </div>
+          </div>
+
+          <div className="rounded-lg p-6">
+            <h2 className="text-xl font-medium mb-3!">Generated files</h2>
+            <div className="grid grid-cols-4 gap-2 truncate">
+              {serverFiles.map((file) => (
+                <a 
+                  key={file.name} 
+                  href={file.url} 
+                  download={file.name}
+                  className="flex items-center justify-between bg-white/10 p-3! rounded hover:bg-white/20 transition duration-200 ease-in-out gap-2"
+                >
+                  <span className='truncate font-mono! font-light text-xs'>{file.name}</span>
+                  <IconDownload size={20}/>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {uploading && (
+            <div className="text-gray-300">Uploading...</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default MainPage
