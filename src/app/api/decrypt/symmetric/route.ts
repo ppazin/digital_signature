@@ -7,17 +7,18 @@ export async function POST(req: Request) {
 
     const aesKey = Buffer.from(readFile("tajni_kljuc.txt").toString(), "hex");
 
-    const encryptedCombined = readFile("encrypted_symmetric.bin");
+    const trimmedName = filename.split(".")[0];
+    const encryptedCombined = readFile(`encrypted_symmetric_${trimmedName}.bin`);
 
-    const iv = encryptedCombined.slice(0, 12);
-    const tag = encryptedCombined.slice(12, 28);
-    const encrypted = encryptedCombined.slice(28);
+    const iv = encryptedCombined.subarray(0, 12);
+    const tag = encryptedCombined.subarray(12, 28);
+    const encrypted = encryptedCombined.subarray(28);
 
     const decrypted = decryptAES(encrypted, aesKey, iv, tag);
 
-    writeFile(`decrypted_${filename}`, decrypted);
+    writeFile(`decrypted_symmetric_${filename}`, decrypted);
 
     return NextResponse.json({
-        message: `Symmetric decryption completed → decrypted_${filename}`,
+        message: `Symmetric decryption completed → decrypted_symmetric_${filename}`,
     });
 }

@@ -10,7 +10,9 @@ export async function POST(req: Request) {
 
     const encrypted = encryptRSA(fileData, publicKey);
 
-    writeFile("encrypted_asymmetric.bin", encrypted);
+    const trimmedName = filename.split(".")[0];
+
+    writeFile(`encrypted_asymmetric_${trimmedName}.bin`, encrypted);
 
     return NextResponse.json({ message: "Asymmetric encryption completed." });
 }

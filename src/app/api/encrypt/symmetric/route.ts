@@ -7,11 +7,12 @@ export async function POST(req: Request) {
     const fileData = readFile(filename);
 
     const aesKey = Buffer.from(readFile("tajni_kljuc.txt").toString(), "hex");
-    const { encrypted, iv, tag } = encryptAES(fileData, aesKey);
+    const { encrypted } = encryptAES(fileData, aesKey);
 
-    const output = Buffer.concat([iv, tag, encrypted]);
 
-    writeFile("encrypted_symmetric.bin", output);
+    const trimmedName = filename.split(".")[0];
+
+    writeFile(`encrypted_symmetric_${trimmedName}.bin`, encrypted);
 
     return NextResponse.json({ message: "Symmetric encryption completed" });
 }

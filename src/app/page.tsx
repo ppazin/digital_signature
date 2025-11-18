@@ -14,6 +14,8 @@ const MainPage = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [serverFiles, setServerFiles] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [symmetricKeyGenerated, setSymmetricKeyGenerated] = useState<boolean>(false)
+  const [asymmetricKeyPairGenerated, setAsymmetricKeyPairGenerated] = useState<boolean>(false)
 
   const { apiCall, message: messageGet } = useApiGetCall()
   const { apiCallPost, message: messagePost } = useApiPostCall()
@@ -61,16 +63,22 @@ const MainPage = () => {
     }
   }
 
-  const handleClearFile = () => setUploadedFile(null)
+  const handleClearFile = () => {
+    setUploadedFile(null)
+    setAsymmetricKeyPairGenerated(false)
+    setSymmetricKeyGenerated(false)
+  }
 
   const handleGenerateSymmetricKey = async () => {
     await apiCall('/api/keys/generate/symmetric')
     loadServerFiles()
+    setSymmetricKeyGenerated(true)
   }
 
   const handleGenerateKeyPair = async () => {
     await apiCall('/api/keys/generate/asymmetric')
     loadServerFiles()
+    setAsymmetricKeyPairGenerated(true)
   }
 
   const handleEncryptSymmetric = async () => {
@@ -143,9 +151,15 @@ const MainPage = () => {
               Symmetric cryptography
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <IconButton icon={<IconKey size={20} />} text="Generate key" onClick={handleGenerateSymmetricKey} />
-              <IconButton icon={<IconLock size={20} />} text="Encrypt" onClick={handleEncryptSymmetric} />
-              <IconButton icon={<IconLockOpen size={20} />} text="Decrypt" onClick={handleDecryptSymmetric} />
+              <IconButton icon={<IconKey size={20} />} 
+              disabled={symmetricKeyGenerated}
+              text="Generate key" onClick={handleGenerateSymmetricKey} />
+              <IconButton icon={<IconLock size={20} />}
+              disabled={!symmetricKeyGenerated}
+              text="Encrypt" onClick={handleEncryptSymmetric} />
+              <IconButton icon={<IconLockOpen size={20} />}
+              disabled={!symmetricKeyGenerated}
+              text="Decrypt" onClick={handleDecryptSymmetric} />
             </div>
           </div>
 
@@ -155,9 +169,15 @@ const MainPage = () => {
               Asymmetric cryptography
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <IconButton icon={<IconKey size={20} />} text="Generate RSA key pair" onClick={handleGenerateKeyPair} />
-              <IconButton icon={<IconLock size={20} />} text="Encrypt" onClick={handleEncryptAsymmetric} />
-              <IconButton icon={<IconLockOpen size={20} />} text="Decrypt" onClick={handleDecryptAsymmetric} />
+              <IconButton icon={<IconKey size={20} />} 
+              disabled={asymmetricKeyPairGenerated}
+              text="Generate RSA key pair" onClick={handleGenerateKeyPair} />
+              <IconButton icon={<IconLock size={20} />} 
+              disabled={!asymmetricKeyPairGenerated}
+              text="Encrypt" onClick={handleEncryptAsymmetric} />
+              <IconButton icon={<IconLockOpen size={20} />} 
+              disabled={!asymmetricKeyPairGenerated}
+              text="Decrypt" onClick={handleDecryptAsymmetric} />
               <IconButton icon={<IconSignature size={20} />} text="Sign file" onClick={handleSignFile} />
               <IconButton icon={<IconFileCheck size={20} />} text="Verify signature" onClick={handleVerifySignature} />
             </div>
@@ -179,7 +199,7 @@ const MainPage = () => {
               {serverFiles.map((file) => (
                 <a 
                   key={file.name} 
-                  href={file.url} 
+                  href={`/api/static/${file.name}`}
                   download={file.name}
                   className="flex items-center justify-between bg-white/10 p-3! rounded hover:bg-white/20 transition duration-200 ease-in-out gap-2"
                 >

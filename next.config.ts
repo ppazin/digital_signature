@@ -1,10 +1,8 @@
-module.exports = {
-  async rewrites() {
-    return [
-      {
-        source: "/data/:path*",
-        destination: "/api/static/:path*",
-      },
-    ];
+const nextConfig = {
+  experimental: {
+    appDir: true,
   },
+  srcDir: "src",
 };
+
+export default nextConfig;
