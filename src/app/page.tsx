@@ -1,6 +1,7 @@
 "use client"
 import FileDropZone from '@/components/FileDropZone'
 import IconButton from '@/components/IconButton'
+import { useApiDeleteCall } from '@/hooks/useApiDeleteCall'
 import { useApiGetCall } from '@/hooks/useApiGetCall'
 import { useApiPostCall } from '@/hooks/useApiPostCall'
 import { 
@@ -14,11 +15,18 @@ const MainPage = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [serverFiles, setServerFiles] = useState([])
   const [uploading, setUploading] = useState(false)
+
   const [symmetricKeyGenerated, setSymmetricKeyGenerated] = useState<boolean>(false)
   const [asymmetricKeyPairGenerated, setAsymmetricKeyPairGenerated] = useState<boolean>(false)
 
+  const [symmetricEncripted, setSymmetricEncripted] = useState<boolean>(false)
+  const [asymmetricEncripted, setAsymmetricEncripted] = useState<boolean>(false)
+
+  const [fileSigned, setFileSigned] = useState<boolean>(false)
+
   const { apiCall, message: messageGet } = useApiGetCall()
   const { apiCallPost, message: messagePost } = useApiPostCall()
+  const { apiDeleteCall } = useApiDeleteCall()
 
   useEffect(() => {
     if (messageGet) toast(messageGet)
@@ -32,6 +40,7 @@ const MainPage = () => {
     const res = await fetch("/api/data")
     const data = await res.json()
     setServerFiles(data.files || [])
+    console.log("Loaded server files:", data.files)
   }
 
   useEffect(() => {
@@ -63,10 +72,12 @@ const MainPage = () => {
     }
   }
 
-  const handleClearFile = () => {
+  const handleClearFile = async () => {
     setUploadedFile(null)
     setAsymmetricKeyPairGenerated(false)
     setSymmetricKeyGenerated(false)
+
+    await apiDeleteCall('/api/remove-all')
   }
 
   const handleGenerateSymmetricKey = async () => {
@@ -83,21 +94,25 @@ const MainPage = () => {
 
   const handleEncryptSymmetric = async () => {
     await apiCallPost('/api/encrypt/symmetric', { filename: uploadedFile.name })
+    setSymmetricEncripted(true)
     loadServerFiles()
   }
 
   const handleDecryptSymmetric = async () => {
     await apiCallPost('/api/decrypt/symmetric', { filename: uploadedFile.name })
+    setSymmetricEncripted(false)
     loadServerFiles()
   }
 
   const handleEncryptAsymmetric = async () => {
     await apiCallPost('/api/encrypt/asymmetric', { filename: uploadedFile.name })
+    setAsymmetricEncripted(true)
     loadServerFiles()
   }
 
   const handleDecryptAsymmetric = async () => {
     await apiCallPost('/api/decrypt/asymmetric', { filename: uploadedFile.name })
+    setAsymmetricEncripted(false)
     loadServerFiles()
   }
 
@@ -108,6 +123,7 @@ const MainPage = () => {
 
   const handleSignFile = async () => {
     await apiCallPost('/api/sign', { filename: uploadedFile.name })
+    setFileSigned(true)
     loadServerFiles()
   }
 
@@ -158,7 +174,7 @@ const MainPage = () => {
               disabled={!symmetricKeyGenerated}
               text="Encrypt" onClick={handleEncryptSymmetric} />
               <IconButton icon={<IconLockOpen size={20} />}
-              disabled={!symmetricKeyGenerated}
+              disabled={!symmetricKeyGenerated || !symmetricEncripted}
               text="Decrypt" onClick={handleDecryptSymmetric} />
             </div>
           </div>
@@ -176,10 +192,12 @@ const MainPage = () => {
               disabled={!asymmetricKeyPairGenerated}
               text="Encrypt" onClick={handleEncryptAsymmetric} />
               <IconButton icon={<IconLockOpen size={20} />} 
-              disabled={!asymmetricKeyPairGenerated}
+              disabled={!asymmetricKeyPairGenerated || !asymmetricEncripted}
               text="Decrypt" onClick={handleDecryptAsymmetric} />
-              <IconButton icon={<IconSignature size={20} />} text="Sign file" onClick={handleSignFile} />
-              <IconButton icon={<IconFileCheck size={20} />} text="Verify signature" onClick={handleVerifySignature} />
+              <IconButton icon={<IconSignature size={20} />} text="Sign file" onClick={handleSignFile} 
+              disabled={!asymmetricKeyPairGenerated}/>
+              <IconButton icon={<IconFileCheck size={20} />} text="Verify signature" onClick={handleVerifySignature}
+              disabled={!fileSigned || !asymmetricKeyPairGenerated} />
             </div>
           </div>
 
@@ -199,8 +217,8 @@ const MainPage = () => {
               {serverFiles.map((file) => (
                 <a 
                   key={file.name} 
-                  href={`/api/static/${file.name}`}
-                  download={file.name}
+                  href={`api/static/${file.name}`}
+                  download={`${file.name}`}
                   className="flex items-center justify-between bg-white/10 p-3! rounded hover:bg-white/20 transition duration-200 ease-in-out gap-2"
                 >
                   <span className='truncate font-mono! font-light text-xs'>{file.name}</span>

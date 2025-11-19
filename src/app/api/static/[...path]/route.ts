@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   request: Request,
-  context: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
-  const params = context.params;
+  const params = await context.params;
 
   if (!params?.path) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
